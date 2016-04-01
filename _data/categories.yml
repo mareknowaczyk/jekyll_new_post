@@ -1,0 +1,6 @@
+- name : post
+  dir : _posts/posts/
+- name : research
+  dir : _posts/researches/
+- name : snippet
+  dir : _posts/snippets/
