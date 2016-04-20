@@ -14,6 +14,12 @@ category: %s
 tags: [%s]
 ---
 """
+
+JEKYLL_CONFIG_YAML = [ "_config.yml", "_config.yaml" ]
+JEKYLL_CATEGORIES_OPTION = "category_list"
+JEKYLL_CATEGORIES_FILE_OPTION = "categories_config_file"
+DEFAULT_CATEGORIES_YAML = "_data/categories.yml"
+
 def parse_options(show_help=False):
     parser = OptionParser(get_usage())
     parser.add_option("-f", "--force", action="store_true", dest="force", default=False)
@@ -24,30 +30,45 @@ def parse_options(show_help=False):
     else:
         return parser.parse_args()
 
-def get_category_config_file(options, args):
-    return "_data/categories.yml"
+def get_jekyll_config():
+    res = False
+    for cfg in JEKYLL_CONFIG_YAML:
+        res = res or os.path.isfile(cfg)
+        if res:
+            break
+    if not res:
+        return {}
+    try:
+        res = load_config(cfg)
+    except:
+        print("Cannot parse %s YAML config gile" % cfg )
+    return res
 
 def get_category_list(options, args):
-    category_config_file = get_category_config_file(options, args)
-    try:
-        categories = load_config(category_config_file)
-    except:
-        print("cannot parse Yaml file %s" % yml_file)
-        sys.exit(2)
+    config = get_jekyll_config()
+    if JEKYLL_CATEGORIES_OPTION in config:
+        categories = config[JEKYLL_CATEGORIES_OPTION]
+    else:
+        if JEKYLL_CATEGORIES_FILE_OPTION in config:
+            category_config_file = config[JEKYLL_CATEGORIES_FILE_OPTION]
+        else:
+            category_config_file = DEFAULT_CATEGORIES_YAML
+        try:
+            categories = load_config(category_config_file)
+        except:
+            print("cannot parse Yaml file %s" % yml_file)
+            sys.exit(2)
     return categories
 
 def parse_category(options, args):
     categories = get_category_list(options, args)
     category_names = [c['name'] for c in categories]
-    if options.category_list:
+    category_name = args[0]
+    if options.category_list or (not category_name in category_names):
+        if not options.category_list:
+            print("Unknow category '%s'." % category_name)
         print "\n  ".join( ["Available categories:"] + category_names )
         exit()
-    category_name = args[0]
-    if not category_name in category_names:
-        print("Unknow category %s." % category_name)
-        print("Available options (defined in _data/categories.yml) are: ")
-        print("\n".join(category_names))
-        sys.exit(3)
     try:
         category = [c for c in categories if c['name'] ==  category_name][0]
     except:
@@ -62,8 +83,11 @@ def load_config(yaml_filename):
 
 def get_usage():
     return """usage: %prog <category> <title> [<tag1> <tag2> .. <tagn>]
-  - available categories options defined in '_data/categories.yml' """
-
+  - available categories can be defined in:
+        * _config.yml as '"""+JEKYLL_CATEGORIES_OPTION+"""'
+        * or category config file defined in _config.yml as '"""+JEKYLL_CATEGORIES_FILE_OPTION+"""'
+        * or '_data/categories.yml'
+        """
 def new_post(category, title, tags, forced):
     now = datetime.date.today()
     file_date = datetime.date.today().strftime("%Y-%m-%d")
