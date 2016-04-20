@@ -3,6 +3,8 @@ import yaml
 import sys, getopt
 import datetime
 import re
+import os
+from optparse import OptionParser
 
 TEMPLATE = """---
 layout: post
@@ -12,20 +14,27 @@ category: %s
 tags: [%s]
 ---
 """
+def parse_options(show_help=False):
+    parser = OptionParser(get_usage())
+    parser.add_option("-f", "--force", action="store_true", dest="force", default=False)
+    if show_help:
+        parser.print_help()
+        return ()
+    else:
+        return parser.parse_args()
 
 def load_config(yaml_filename):
     with open(yaml_filename) as f:
         yml_content = f.read()
     return yaml.load(yml_content)
 
-def show_usage():
-    print("""
-    new.py <category> <title> [<tag1> <tag2> .. <tagn>]
-        - available categories options defined in '_data/categories.yml'
-    """
-    )
 
-def new_post(category, title, tags):
+
+def get_usage():
+    return """usage: %prog <category> <title> [<tag1> <tag2> .. <tagn>]
+  - available categories options defined in '_data/categories.yml' """
+
+def new_post(category, title, tags, forced):
     now = datetime.date.today()
     file_date = datetime.date.today().strftime("%Y-%m-%d")
     full_date = datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")
@@ -34,11 +43,22 @@ def new_post(category, title, tags):
         r"-",
         title.lower())
     filename = "%s-%s.md" % (file_date, file_title)
-    with open(category['dir']+'/'+filename, 'w') as f:
+    full_filepath = category['dir']+'/'+filename
+    show_overwrite_message = False
+    if os.path.isfile(full_filepath):
+        if (not forced):
+            raise Exception("File '%s' exists and will be NOT overwritten." % full_filepath)
+        else:
+            show_overwrite_message = True
+    with open(full_filepath, 'w') as f:
         f.write(TEMPLATE % (title, full_date, category['name'],", ".join(tags))
         )
+    if show_overwrite_message:
+        print "File '%s' was overwritten" % full_filepath
 
 if __name__ == "__main__":
+    options, args = parse_options()
+
     yml_file = "_data/categories.yml"
     try:
         categories = load_config(yml_file)
@@ -64,4 +84,7 @@ if __name__ == "__main__":
         print("There was problem with retrieving category for %s" % category_name)
         sys.exit(4)
     tags = sys.argv[3:]
-    new_post(category, title, tags)
+    try:
+        new_post(category, title, tags, options.force)
+    except Exception as e:
+        print e

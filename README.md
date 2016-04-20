@@ -12,9 +12,15 @@ New posts are created with actual date & time in post category's directory.
 
 Launch following command in terminal:
 
-<pre>
+```
 python new.py category title [tag_1 tag_2 .. tag_n]
-</pre>
+Usage: new.py <category> <title> [<tag1> <tag2> .. <tagn>]
+  - available categories options defined in '_data/categories.yml'
+
+Options:
+  -h, --help   show this help message and exit
+  -f, --force
+```
 
 Categories are defined in `_data/categories.yml`.
 In order to selected category, post will be placed in directory assigned to category.
@@ -55,6 +61,5 @@ tags: [new]
 - define `categories.yml` alternative name and directory in `config.yml`
 - read default _data folder from `config.yml`
 - read default _posts folder from `config.yml`
-- prevent posts overwriting (if new post has the same date and title, it overwrites existing post without asking)
 - define post template in `config.yml'
 - define timezone in `config.yml`
