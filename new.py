@@ -17,18 +17,48 @@ tags: [%s]
 def parse_options(show_help=False):
     parser = OptionParser(get_usage())
     parser.add_option("-f", "--force", action="store_true", dest="force", default=False)
+    parser.add_option("-c", "--category-list", action="store_true", dest="category_list", default=False)
     if show_help:
         parser.print_help()
         return ()
     else:
         return parser.parse_args()
 
+def get_category_config_file(options, args):
+    return "_data/categories.yml"
+
+def get_category_list(options, args):
+    category_config_file = get_category_config_file(options, args)
+    try:
+        categories = load_config(category_config_file)
+    except:
+        print("cannot parse Yaml file %s" % yml_file)
+        sys.exit(2)
+    return categories
+
+def parse_category(options, args):
+    categories = get_category_list(options, args)
+    category_names = [c['name'] for c in categories]
+    if options.category_list:
+        print "\n  ".join( ["Available categories:"] + category_names )
+        exit()
+    category_name = args[0]
+    if not category_name in category_names:
+        print("Unknow category %s." % category_name)
+        print("Available options (defined in _data/categories.yml) are: ")
+        print("\n".join(category_names))
+        sys.exit(3)
+    try:
+        category = [c for c in categories if c['name'] ==  category_name][0]
+    except:
+        print("There was problem with retrieving category for %s" % category_name)
+        sys.exit(4)
+    return category
+
 def load_config(yaml_filename):
     with open(yaml_filename) as f:
         yml_content = f.read()
     return yaml.load(yml_content)
-
-
 
 def get_usage():
     return """usage: %prog <category> <title> [<tag1> <tag2> .. <tagn>]
@@ -58,32 +88,13 @@ def new_post(category, title, tags, forced):
 
 if __name__ == "__main__":
     options, args = parse_options()
-
-    yml_file = "_data/categories.yml"
-    try:
-        categories = load_config(yml_file)
-    except:
-        print("cannot parse Yaml file %s" % yml_file)
-        sys.exit(2)
-    category_names = [c['name'] for c in categories]
-    try:
-        category_name = sys.argv[1]
-        title = sys.argv[2]
-    except:
+    if len(args) < 2:
         print("not enough parameters")
-        show_usage()
+        parse_options(True)
         sys.exit(1)
-    if not category_name in category_names:
-        print("Unknow category %s." % category_name)
-        print("Available options (defined in _data/categories.yml) are: ")
-        print("\n".join(category_names))
-        sys.exit(3)
-    try:
-        category = [c for c in categories if c['name'] ==  category_name][0]
-    except:
-        print("There was problem with retrieving category for %s" % category_name)
-        sys.exit(4)
-    tags = sys.argv[3:]
+    category = parse_category(options, args)
+    title = args[1]
+    tags = args[2:]
     try:
         new_post(category, title, tags, options.force)
     except Exception as e:
